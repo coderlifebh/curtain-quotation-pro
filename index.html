@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Curtain Quotation Pro</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.1.1",
+        "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+        "react/": "https://esm.sh/react@^19.1.1/",
+        "@google/generative-ai": "https://esm.sh/@google/generative-ai"
+      }
+    }
+    </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    /* Custom scrollbar for a more integrated look */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+      /* slate-800 */
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      /* slate-600 */
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+      /* slate-500 */
+    }
+
+    /* Column Resizer Styles */
+    th {
+      position: relative;
+      /* Needed for the resizer handle */
+    }
+
+    .resizer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 5px;
+      cursor: col-resize;
+      user-select: none;
+      height: 100%;
+      z-index: 10;
+      transition: background-color 0.2s ease;
+    }
+
+    .resizer:hover {
+      background-color: #3b82f6;
+      /* blue-500 */
+      opacity: 0.5;
+    }
+
+    body.resizing {
+      cursor: col-resize;
+      user-select: none;
+    }
+
+    /* Preview Modal Styles */
+    .preview-modal-container {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+    }
+
+    .preview-modal-overlay {
+      position: absolute;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.75);
+    }
+
+    .preview-modal-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      color: black;
+      width: 95%;
+      max-width: 842px;
+      /* A4 paper width at 96 DPI */
+      height: 95%;
+      max-height: 95vh;
+      overflow-y: auto;
+      border-radius: 0.5rem;
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
+      padding: 1rem;
+    }
+
+    /* Drag and Drop Styles */
+    .dragging-row {
+      opacity: 0.5;
+      background: #334155;
+      /* slate-700 */
+    }
+
+    .drag-handle {
+      cursor: grab;
+      padding: 4px;
+      color: #94a3b8;
+      /* slate-400 */
+    }
+
+    .drag-handle:hover {
+      color: #e2e8f0;
+      /* slate-200 */
+    }
+
+    body.grabbing,
+    body.grabbing * {
+      cursor: grabbing !important;
+    }
+
+    /* Remove spinners from number inputs for a cleaner look */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    input[type=number] {
+      -moz-appearance: textfield;
+      /* Firefox */
+    }
+  </style>
+  <style>
+    @media print {
+
+      /* === GENERAL PRINT STYLES === */
+      body {
+        background: white !important;
+        color: black !important;
+        font-size: 10pt;
+      }
+
+      /* Hide UI chrome */
+      .no-print,
+      header[class*="sticky"],
+      aside {
+        display: none !important;
+      }
+
+      /* Reset layout for main content area */
+      div[class*="lg:pl-"] {
+        padding-left: 0 !important;
+      }
+
+      main {
+        padding: 1rem !important;
+        /* Provide some base padding for reports */
+      }
+
+      /* Reset dark mode styles for printable sections */
+      .bg-slate-800,
+      .bg-slate-900,
+      .bg-slate-800\/50,
+      .bg-slate-800\/50,
+      .shadow-2xl,
+      .shadow-slate-950\/50 {
+        background: transparent !important;
+        box-shadow: none !important;
+        border: 1px solid #dee2e6 !important;
+      }
+
+      .text-white,
+      .text-slate-100,
+      .text-slate-300,
+      .text-slate-400,
+      .text-blue-300,
+      .text-blue-400,
+      .text-green-300,
+      .text-green-400,
+      .text-purple-600 {
+        color: black !important;
+      }
+
+      .divide-slate-700,
+      .border-slate-700 {
+        border-color: #dee2e6 !important;
+      }
+
+      h1,
+      h2,
+      h3,
+      table,
+      .grid {
+        break-inside: avoid;
+      }
+
+      /* === PRINT LOGIC: MODAL vs MAIN CONTENT === */
+
+      /* If a preview modal exists, ONLY print the modal */
+      body:has(.preview-modal-container) main {
+        display: none !important;
+      }
+
+      /* Style the preview modal for printing */
+      .preview-modal-container {
+        position: static !important;
+      }
+
+      .preview-modal-overlay {
+        display: none !important;
+      }
+
+      .preview-modal-content {
+        position: static !important;
+        transform: none !important;
+        box-shadow: none !important;
+        border: none !important;
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        color: black !important;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="/index.css">
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>
